@@ -7,11 +7,10 @@
 #include <string.h>
 #include <vector>
 
+#include "./parse.h"
 #include "./types.h"
 
 namespace klambda {
-
-    typedef std::queue<std::string> tokens_t;
 
     const std::string kl_alpha = { "=-*/+_?$!@~.><&%'#`" };
 
@@ -92,7 +91,8 @@ namespace klambda {
 
         auto token = tokens.front();
         tokens.pop();
-        
+
+        //std::cout << "token: " << token << std::endl;        
         if( isdigit( token[0] ) ) {
             double ld = std::strtold( &token[0], nullptr );
             int64_t n = ld;
@@ -103,16 +103,19 @@ namespace klambda {
         }
 
         if( token[0] == '"' ) {
-            return GC::make<sexpr_t>( token );
+            std::string non_quoted_string( &token[1] );
+            non_quoted_string.resize( non_quoted_string.size() - 1 );
+            return GC::make<sexpr_t>( non_quoted_string );
         }
 
         // a symbol
         if( token[0] != '(' ) {
-            std::string upcase;
-            std::transform( token.begin(), token.end(), upcase.begin(), ::toupper );
+            std::string upcase = token;
+            std::transform( upcase.begin(), upcase.end(), upcase.begin(), ::toupper );
 
-            if( token == "TRUE" || token == "FALSE" ) 
-                return GC::make<sexpr_t>( token == "TRUE" );
+            if( upcase == "TRUE" || upcase == "FALSE" ) {
+                return GC::make<sexpr_t>( upcase == "TRUE" );
+            }
 
             return GC::make<sexpr_t>( (symbol_t){ token } );
         }
@@ -146,10 +149,10 @@ namespace klambda {
         if( sexpr == nullptr ) return "";
 
         if( std::holds_alternative<symbol_t>( sexpr->node ) )       return std::get<symbol_t>( sexpr->node ).symbol;
-        if( std::holds_alternative<std::string>( sexpr->node ) )    return std::get<std::string>( sexpr->node );
+        if( std::holds_alternative<std::string>( sexpr->node ) )    return "\"" + std::get<std::string>( sexpr->node ) + "\"";
         if( std::holds_alternative<int64_t>( sexpr->node ) )        return std::to_string( std::get<int64_t>( sexpr->node ) );
         if( std::holds_alternative<double>( sexpr->node ) )         return std::to_string( std::get<double>( sexpr->node ) );
-        if( std::holds_alternative<bool>( sexpr->node ) )           return std::get<bool>( sexpr->node ) ? "TRUE" : "FALSE";
+        if( std::holds_alternative<bool>( sexpr->node ) )           return std::get<bool>( sexpr->node ) ? "true" : "false";
 
         std::string str;
         if( std::holds_alternative<list_t>( sexpr->node ) ) {
@@ -171,35 +174,8 @@ namespace klambda {
     }
 
 
-    // the default read-eval-print-loop
-    void repl( const std::string &prompt ) { // }, environment *env ) {
-        while( true ) {
-            std::cout << prompt;
-            
-            // get input and convert to tokens (vector of std:string)
-            std::string line;   std::getline( std::cin, line );
-            auto tokens = tokenize( line );
-
-            /*         
-            auto pr_tokens = tokens;
-            for( ; pr_tokens.empty() == false; pr_tokens.pop() ) {
-                std::cout << "token: '" << pr_tokens.front() << "'" << std::endl;
-            }
-            */
-            auto sexpr = makeSexpr( tokens );
-                     
-            // undefined_symbols.clear();
-            std::cout << SexprToString( sexpr, true ) << std::endl;
-        }
-    }
-
-
 }
 
 
-int main( int argc, char *argv[] ) {
-    klambda::repl( "> " );
-    return 0;
-}
 
 

@@ -3,121 +3,150 @@
 
 namespace klambda {
 
-    typedef GC::ptr<sexpr_t> (*native_function)( GC::ptr<sexpr_t>, int tc );
 
-	GC::ptr<sexpr_t> evalArithmetic( GC::ptr<sexpr_t>, int tc ) {
-        return nullptr;
-    }
+    env_t envs;
     
-	GC::ptr<sexpr_t> evalAbsvector( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalAbsvectorP( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalAddressRead( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalAddressWrite( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalAnd( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalClose( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalCn( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalCond( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalConsP( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalCons( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalDefun( GC::ptr<sexpr_t>, int tc );      
-	GC::ptr<sexpr_t> evalErrorToString( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalEqual( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalFreeze( GC::ptr<sexpr_t>, int tc );     
-	GC::ptr<sexpr_t> evalGetTime( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalHd( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalIf( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalIntern( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalKLambda( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalLambda( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalLet( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalNToString( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalNumberP( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalOpen( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalOr( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalPos( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalReadByte( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalSet( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalSimpleError( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalStr( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalStringP( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalStringToN( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalTl( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalTlstr( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalTrapError( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalType( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalValue( GC::ptr<sexpr_t>, int tc );
-	GC::ptr<sexpr_t> evalWriteByte( GC::ptr<sexpr_t>, int tc );
+    typedef GC::ptr<sexpr_t> (*native_function)( env_t &env, GC::ptr<sexpr_t>, int tc );
 
-    std::unordered_map< std::string, native_function > primitives = {
-/*
-        { "+",              evalArithmetic },
-        { "-",              evalArithmetic },
-        { "*",              evalArithmetic },
-        { "/",              evalArithmetic },
-        { ">",              evalArithmetic },
-        { "<",              evalArithmetic },
-        { ">=",             evalArithmetic },
-        { "<=",             evalArithmetic },
-        { "absvector",      evalAbsvector },                
-        { "absvector?",     evalAbsvectorP },
-        { "<-address",      evalAddressRead },
-        { "address->",      evalAddressWrite },
-        { "and",            evalAnd },
-        { "close",          evalClose },
-        { "cn",             evalCn }, 
-        { "cond",           evalCond },
-        { "cons?",          evalConsP },         
-        { "cons",           evalCons },
-        { "defun",          evalDefun },
-        { "error-to-string",evalErrorToString },
-        { "=",              evalEqual },
-        { "eval-kl",        evalKLambda },
-        { "freeze",         evalFreeze },        
-        { "get-time",       evalGetTime }, 
-        { "hd",             evalHd },
-        { "if",             evalIf },
-        { "intern",         evalIntern },
-        { "lambda",         evalLambda },
-        { "let",            evalLet },        
-        { "n->string",      evalNToString },
-        { "number?",        evalNumberP },
-        { "open",           evalOpen },
-        { "or",             evalOr },
-        { "pos",            evalPos },
-        { "read-byte",      evalReadByte },
-        { "set",            evalSet },
-        { "simple-error",   evalSimpleError },
-        { "str",            evalStr },
-        { "string?",        evalStringP },
-        { "string->n",      evalStringToN }, 
-        { "tl",             evalTl },                                 
-        { "tlstr",          evalTlstr },
-        { "trap-error",     evalTrapError }, 
-        { "type",           evalType },
-        { "value",          evalValue },
-        { "write-byte",     evalWriteByte },        
-*/        
+	int NumberOfArgs( GC::ptr<sexpr_t> args ) {
+		auto pv = std::get_if<list_t>( &args->node );
+		if( pv == nullptr ) return 1;
+
+		int i = 0;
+		while( pv != nullptr ) {
+			++i;
+			auto cdr = (*pv).second;
+			pv = std::get_if<list_t>( &cdr->node );
+		}
+		return i;
+	}
+
+	GC::ptr<sexpr_t> evalPlus( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalMinus( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalMul( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalDiv( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalGt( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalLt( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalGe( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalLe( env_t &env, GC::ptr<sexpr_t>, int tc );
+
+	GC::ptr<sexpr_t> evalAbsvector( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalAbsvectorP( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalAddressRead( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalAddressWrite( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalAnd( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalClose( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalCn( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalCond( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalConsP( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalCons( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalDefun( env_t &env, GC::ptr<sexpr_t>, int tc );      
+	GC::ptr<sexpr_t> evalErrorToString( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalEqual( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalFreeze( env_t &env, GC::ptr<sexpr_t>, int tc );     
+	GC::ptr<sexpr_t> evalGetTime( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalHd( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalIf( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalIntern( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalKLambda( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalLambda( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalLet( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalNToString( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalNumberP( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalOpen( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalOr( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalPos( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalReadByte( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalSet( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalSimpleError( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalStr( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalStringP( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalStringToN( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalTl( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalTlstr( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalTrapError( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalType( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalValue( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalWriteByte( env_t &env, GC::ptr<sexpr_t>, int tc );
+
+    std::unordered_map< std::string, std::pair< native_function, int > > primitives = {
+        { "+",              { evalPlus,             2 } },
+        { "-",              { evalMinus,			2 } },
+        { "*",              { evalMul,			    2 } },
+        { "/",              { evalDiv,			    2 } },
+        { ">",              { evalGt,			    2 } },
+        { "<",              { evalLt,			    2 } },
+        { ">=",             { evalGe,			    2 } },
+        { "<=",             { evalLe,			    2 } },
+        { "absvector",      { evalAbsvector,		0 } },                
+        { "absvector?",     { evalAbsvectorP,		1 } },
+        { "<-address",      { evalAddressRead,	    2 } },
+        { "address->",      { evalAddressWrite,	    3 } },
+        { "and",            { evalAnd,			    2 } },
+        { "close",          { evalClose,			2 } },
+        { "cn",             { evalCn,			    2 } }, 
+        { "cond",           { evalCond,			    -1 } },
+        { "cons?",          { evalConsP,			1 } },         
+        { "cons",           { evalCons,			    2 } },
+        { "defun",          { evalDefun,			-1 } },
+        { "error-to-string",{ evalErrorToString,	1 } },
+        { "=",              { evalEqual,			2 } },
+        { "eval-kl",        { evalKLambda,		    -1 } },
+        { "freeze",         { evalFreeze,			2 } },        
+        { "get-time",       { evalGetTime,		    1 } }, 
+        { "hd",             { evalHd,			    1 } },
+        { "if",             { evalIf,			    3 } },
+        { "intern",         { evalIntern,			1 } },
+        { "lambda",         { evalLambda,			-1 } },
+        { "let",            { evalLet,			    2 } },        
+        { "n->string",      { evalNToString,		1 } },
+        { "number?",        { evalNumberP,		    1 } },
+        { "open",           { evalOpen,			    2 } },
+        { "or",             { evalOr,			    2 } },
+        { "pos",            { evalPos,			    2 } },
+        { "read-byte",      { evalReadByte,		    2 } },
+        { "set",            { evalSet,			    2 } },
+        { "simple-error",   { evalSimpleError,	    1 } },
+        { "str",            { evalStr,			    1 } },
+        { "string?",        { evalStringP,		    1 } },
+        { "string->n",      { evalStringToN,		1 } }, 
+        { "tl",             { evalTl,			    1 } },                                 
+        { "tlstr",          { evalTlstr,			1 } },
+        { "trap-error",     { evalTrapError,		0 } }, 
+        { "type",           { evalType,			    1 } },
+        { "value",          { evalValue,			1 } },
+        { "write-byte",     { evalWriteByte,		1 } },               
     };
 
-    GC::ptr<sexpr_t> apply( GC::ptr<sexpr_t> function, GC::ptr<sexpr_t>args, int tc );
+    GC::ptr<sexpr_t> apply( env_t &env, GC::ptr<sexpr_t> function, GC::ptr<sexpr_t>args, int tc );
 
-    GC::ptr<sexpr_t> eval( GC::ptr<sexpr_t> sexpr, int tc ) {
+    GC::ptr<sexpr_t> eval( env_t &env, GC::ptr<sexpr_t> sexpr, int tc ) {
         
         if( isAtom( sexpr ) ) return sexpr;
 
         if( std::holds_alternative<list_t>( sexpr->node ) ) {
             // Check if this is a primtive call
             if( std::holds_alternative<symbol_t>( std::get<list_t>( sexpr->node ).first->node ) ) {
+                // function_symbol is the function name, e.g. (func a b c), function_symbol is "func"
                 auto function_symbol = std::get<symbol_t>( std::get<list_t>( sexpr->node ).first->node );
+                // is the function a primitve function
                 auto primitive_iter = primitives.find( function_symbol.symbol );
                 if( primitive_iter != primitives.end() ) {
-                    return primitive_iter->second( std::get<list_t>( sexpr->node ).second, tc );
+                    // check the number of arguments 
+                    auto native_function = primitive_iter->second.first;
+                    auto nparams = primitive_iter->second.second;
+                    if( nparams >= 0 ) {
+                        auto nargs = NumberOfArgs( std::get<list_t>( sexpr->node ).second );
+                        if( nparams != nargs ) throw error_t{ ERROR_INCORRECT_NUMBER_OF_ARGUMENTS, nargs };
+                    }
+
+                    return native_function( env, std::get<list_t>( sexpr->node ).second, tc );
                 }
             }
 
-            GC::ptr<sexpr_t> function = eval( std::get<list_t>( sexpr->node ).first, tc );
+            GC::ptr<sexpr_t> function = eval( env, std::get<list_t>( sexpr->node ).first, tc );
 
-            apply( function, std::get<list_t>( sexpr->node ).second, tc );
+            apply( env, function, std::get<list_t>( sexpr->node ).second, tc );
 
         }
 
@@ -125,7 +154,7 @@ namespace klambda {
     }
 
 
-    GC::ptr<sexpr_t> apply( GC::ptr<sexpr_t> function, GC::ptr<sexpr_t>args, int tc ) {
+    GC::ptr<sexpr_t> apply( env_t &env, GC::ptr<sexpr_t> function, GC::ptr<sexpr_t>args, int tc ) {
 
 
         return nullptr;

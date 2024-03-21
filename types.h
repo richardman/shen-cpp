@@ -11,15 +11,21 @@
 
 #include "../../../cpp-gc/GarbageCollection.h"
 
+#include "./status_codes.h"
+
 namespace klambda {
 
     class sexpr_t;
 
     typedef std::pair<GC::ptr<sexpr_t>, GC::ptr<sexpr_t>> list_t;
-    typedef std::map<std::string, GC::ptr<sexpr_t>> dictionary_t;    
-    typedef std::unordered_map<std::string, GC::ptr<sexpr_t>> symbol_table_t;    
+    typedef std::map<std::string, GC::ptr<sexpr_t>> dictionary_t;     
     typedef std::vector<GC::ptr<sexpr_t>> vector_t;
 
+    typedef std::unordered_map<std::string, GC::ptr<sexpr_t>> symbol_table_t;
+    typedef std::vector<symbol_table_t> env_t;  
+
+    extern env_t envs;
+    
     class empty_list_t {
       public:
         bool empty = true;
@@ -48,7 +54,6 @@ namespace klambda {
 
     class primitive_t {
         std::string name;
-        sexpr_t *parameters;
         sexpr_t (*native_function)( sexpr_t * params );
     };
 
@@ -67,8 +72,8 @@ namespace klambda {
 
 
     typedef std::variant<
-        symbol_t,
         std::string,
+        symbol_t,        
         int64_t,
         double,
         bool,
@@ -116,5 +121,20 @@ namespace klambda {
         }
         return false;
     }    
+
+    static inline GC::ptr<sexpr_t> car( GC::ptr<sexpr_t> sexpr ) {
+      auto pv = std::get_if<list_t>( &sexpr->node );
+      if( pv == nullptr ) throw error_t{ ERROR_SEXPR_NOT_A_LIST, 0 };
+
+      return (*pv).first;
+    }
+
+    static inline GC::ptr<sexpr_t> cdr( GC::ptr<sexpr_t> sexpr ) {
+      auto pv = std::get_if<list_t>( &sexpr->node );
+      if( pv == nullptr ) throw error_t{ ERROR_SEXPR_NOT_A_LIST, 0 };
+
+      return (*pv).second;
+    }
+
 
 }
