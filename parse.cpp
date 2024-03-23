@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include <assert.h>
 #include <ctype.h>
 #include <iostream>
 #include <memory>
@@ -13,9 +14,7 @@
 namespace klambda {
 
     const std::string kl_alpha = { "=-*/+_?$!@~.><&%'#`" };
-
-    std::string SexprToString( GC::ptr<sexpr_t> sexpr );
-
+    
     static inline bool EndOfInput( const char c ) {
         return ( c == 0 || c == '\n' );
     } 
@@ -31,13 +30,13 @@ namespace klambda {
                 next++;
 
             std::string str;
-
             // symbol
-            if( isalpha(*next) || kl_alpha.find_first_of( *next ) != std::string::npos ) {
+            if( isalpha( *next ) || kl_alpha.find_first_of( *next ) != std::string::npos ) {
                 str += *next++;
-                while( isalnum(*next) || kl_alpha.find_first_of( *next ) != std::string::npos )
+                while( isalnum( *next ) || kl_alpha.find_first_of( *next ) != std::string::npos )
                     str += *next++;
-            } // integer
+            }             
+            // integer
             else if( isdigit( *next ) || ( ( *next == '+' || *next == '-' ) && isdigit( next[1]) ) ) {
                 if( *next == '+' ) 
                     next++;
@@ -110,12 +109,10 @@ namespace klambda {
 
         // a symbol
         if( token[0] != '(' ) {
-            std::string upcase = token;
-            std::transform( upcase.begin(), upcase.end(), upcase.begin(), ::toupper );
-
-            if( upcase == "TRUE" || upcase == "FALSE" ) {
-                return GC::make<sexpr_t>( upcase == "TRUE" );
-            }
+            if( token == "true" )
+                return GC::make<sexpr_t>( true );
+            else if( token == "false" )
+                return GC::make<sexpr_t>( false );
 
             return GC::make<sexpr_t>( (symbol_t){ token } );
         }
@@ -171,6 +168,13 @@ namespace klambda {
             return str;
         }
         return "?#bad-sexpr";
+    }
+
+
+    bool isSymbol( const char *s, const char * &endp, char optional_delim ) {
+
+
+        return false;
     }
 
 

@@ -5,7 +5,7 @@ namespace klambda {
 
 
     env_t envs;
-    
+
     typedef GC::ptr<sexpr_t> (*native_function)( env_t &env, GC::ptr<sexpr_t>, int tc );
 
 	int NumberOfArgs( GC::ptr<sexpr_t> args ) {
@@ -62,6 +62,7 @@ namespace klambda {
 	GC::ptr<sexpr_t> evalStr( env_t &env, GC::ptr<sexpr_t>, int tc );
 	GC::ptr<sexpr_t> evalStringP( env_t &env, GC::ptr<sexpr_t>, int tc );
 	GC::ptr<sexpr_t> evalStringToN( env_t &env, GC::ptr<sexpr_t>, int tc );
+	GC::ptr<sexpr_t> evalSymbolP( env_t &env, GC::ptr<sexpr_t>, int tc );    
 	GC::ptr<sexpr_t> evalTl( env_t &env, GC::ptr<sexpr_t>, int tc );
 	GC::ptr<sexpr_t> evalTlstr( env_t &env, GC::ptr<sexpr_t>, int tc );
 	GC::ptr<sexpr_t> evalTrapError( env_t &env, GC::ptr<sexpr_t>, int tc );
@@ -98,7 +99,7 @@ namespace klambda {
         { "if",             { evalIf,			    3 } },
         { "intern",         { evalIntern,			1 } },
         { "lambda",         { evalLambda,			-1 } },
-        { "let",            { evalLet,			    2 } },        
+        { "let",            { evalLet,			    3 } },        
         { "n->string",      { evalNToString,		1 } },
         { "number?",        { evalNumberP,		    1 } },
         { "open",           { evalOpen,			    2 } },
@@ -110,6 +111,7 @@ namespace klambda {
         { "str",            { evalStr,			    1 } },
         { "string?",        { evalStringP,		    1 } },
         { "string->n",      { evalStringToN,		1 } }, 
+        { "symbol?",        { evalSymbolP,		    1 } },         
         { "tl",             { evalTl,			    1 } },                                 
         { "tlstr",          { evalTlstr,			1 } },
         { "trap-error",     { evalTrapError,		0 } }, 

@@ -25,7 +25,7 @@ namespace klambda {
     typedef std::vector<symbol_table_t> env_t;  
 
     extern env_t envs;
-    
+
     class empty_list_t {
       public:
         bool empty = true;
@@ -65,8 +65,12 @@ namespace klambda {
     class symbol_t {
       public:
         std::string symbol;
+        // a symbol structure can hold something that looks like a symbol, but is not
+        // e.g. ( intern "123rt" )
+        bool is_symbol = true;  
 
         symbol_t( std::string a_symbol ) : symbol( a_symbol ) {}
+        symbol_t( std::string a_symbol, bool is_symbol_flag ) : symbol( a_symbol ), is_symbol( is_symbol_flag ) {}        
     };
 
 

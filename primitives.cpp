@@ -105,11 +105,65 @@ namespace klambda {
 		return ( (*pv) == true ) ? eval( env, if_true, tc ) : eval( env, if_false, tc );
     } 
 
-	GC::ptr<sexpr_t> evalIntern( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
+	GC::ptr<sexpr_t> evalIntern( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
+        auto operand = eval( env, car( args ), 0 );
+        auto pv = mustBeOfType<std::string>( operand );        
+
+        std::string token = *pv;
+
+        if( token == "true" )
+            return GC::make<sexpr_t>( true );
+        else if( token == "false" )
+            return GC::make<sexpr_t>( false );
+
+        bool is_symbol = false;
+        if( isalpha( token[0] ) || kl_alpha.find_first_of( token[0] ) != std::string::npos ) {
+            int i = 1;
+            for( ; i < token.size() - 1; i++ ) {
+                if( isalnum( token[i] ) == false && kl_alpha.find_first_of( token[i] ) == std::string::npos )
+                    break;
+            }
+            if( i == token.size() - 1)
+                is_symbol = true;
+        } 
+        symbol_t symbol( token, is_symbol );
+        return GC::make<sexpr_t>( symbol ); 
+    }
+
+
 	GC::ptr<sexpr_t> evalKLambda( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
 	GC::ptr<sexpr_t> evalLambda( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
-	GC::ptr<sexpr_t> evalLet( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
-	GC::ptr<sexpr_t> evalNToString( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
+
+	GC::ptr<sexpr_t> evalLet( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
+        auto var = car( args );
+        auto value = car( cdr( args ) );
+        auto body = car( cdr( cdr( args ) ) );
+
+        auto pv_var = mustBeOfType<symbol_t>( var );
+        if( isupper( pv_var->symbol[0] ) == false ) throw error_t{ ERROR_SEXPR_NOT_A_VARIABLE, 0 };
+
+        symbol_table_t local_env;
+        auto bind = eval( env, value, 0 );
+        std::cout << "let var: " << pv_var->symbol << " = " << SexprToString( bind, true ) << std::endl;
+        local_env[pv_var->symbol] = bind;
+
+        // set some kind of env frame marker so that throw can restore it properly
+        env.push_back( local_env );
+        auto res = eval( env, body, tc );
+        env.pop_back();
+        return res; 
+    }
+
+	GC::ptr<sexpr_t> evalNToString( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
+        auto operand = eval( env, car( args ), 0 );
+        auto pv = mustBeOfType<int64_t>( operand );
+
+        std::string str;
+        unsigned char uc = (unsigned char)( *pv );
+        str.push_back( uc );
+            
+        return GC::make<sexpr_t>( str );
+    }
 
 	GC::ptr<sexpr_t> evalNumberP( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
         auto operand = eval( env, car( args ), 0 );
@@ -148,7 +202,16 @@ namespace klambda {
 	GC::ptr<sexpr_t> evalReadByte( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
 	
     GC::ptr<sexpr_t> evalSet( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
-        return nullptr; 
+        auto first = car( args );
+        auto pv_first = mustBeOfType<symbol_t>( first );
+        //std::cout << "cdr: " << SexprToString( car( cdr( args ) ), true ) << std::endl;
+        auto second = eval( env, car( cdr( args ) ), 0);
+
+        if( isupper( pv_first->symbol[0] ) ) {
+            env[env.size()-1][pv_first->symbol] = second;
+            return second; 
+        }
+        return first;
     }
 
 	GC::ptr<sexpr_t> evalSimpleError( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
@@ -172,11 +235,28 @@ namespace klambda {
         else
             throw error_t{ ERROR_ARGUMENT_IS_NOT_AN_ATOM, 0 };
         return GC::make<sexpr_t>( str ); 
-        }
+    }
 
 
-	GC::ptr<sexpr_t> evalStringP( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
-	GC::ptr<sexpr_t> evalStringToN( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
+	GC::ptr<sexpr_t> evalStringP( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
+        auto operand = eval( env, car( args ), 0 );
+        return GC::make<sexpr_t>( std::holds_alternative<std::string>( operand->node ) == true );
+    }
+
+	GC::ptr<sexpr_t> evalStringToN( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
+        auto operand = eval( env, car( args ), 0 );
+        auto pv = mustBeOfType<std::string>( operand );
+
+        int64_t ui = (*pv)[0];
+        return GC::make<sexpr_t>( ui );
+    }
+
+	GC::ptr<sexpr_t> evalSymbolP( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
+        auto operand = eval( env, car( args ), 0 );
+        auto pv = std::get_if<symbol_t>( &operand->node );
+
+        return GC::make<sexpr_t>( pv != nullptr && pv->is_symbol == true );
+    }
 
 	GC::ptr<sexpr_t> evalTl( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
         auto operand = eval( env, car( args ), 0 );
@@ -195,10 +275,27 @@ namespace klambda {
 
 	GC::ptr<sexpr_t> evalTrapError( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
 	GC::ptr<sexpr_t> evalType( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
-	GC::ptr<sexpr_t> evalValue( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
+
+	GC::ptr<sexpr_t> evalValue( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
+        auto operand = eval( env, car( args ), 0 );
+        auto pv = mustBeOfType<symbol_t>( operand );
+
+        if( isupper( pv->symbol[0] ) ) {
+            for( int i = env.size() - 1; i >= 0; i-- ) {
+                auto iter = env[i].find( pv->symbol );
+                if( iter != env[i].end() ) {
+                    return iter->second;
+                }
+            }
+        }
+        return nullptr; 
+    }
+
+
 	GC::ptr<sexpr_t> evalWriteByte( env_t &env, GC::ptr<sexpr_t>, int tc ) { return nullptr; }
 
 
+    /**** Arithmetic Operators ****/
 
 	GC::ptr<sexpr_t> evalPlus( env_t &env, GC::ptr<sexpr_t> args, int tc ) { 
         auto left = eval( env, car( args ), 0 );
